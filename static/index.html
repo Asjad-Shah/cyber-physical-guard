@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Physical Guard | Fleet Monitoring System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root {
+            --bg-dark: #0a0e17;
+            --bg-card: #111827;
+            --bg-secondary: #1f2937;
+            --border: #374151;
+            --text: #f9fafb;
+            --text-dim: #9ca3af;
+            --text-muted: #6b7280;
+            --blue: #3b82f6;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .logo-text { font-size: 16px; font-weight: 700; }
+        .header-status { display: flex; align-items: center; gap: 20px; }
+        .status-badge {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px; font-size: 13px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+        .status-dot.active { background: var(--green); }
+        .datetime { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); }
+
+        .main-container { padding: 16px; }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 8px;
+            color: var(--text-dim);
+        }
+        .panel-header i { color: var(--blue); }
+        .panel-body { padding: 16px; }
+
+        .architecture-img-container {
+            background: var(--bg-secondary);
+            border-radius: 8px; padding: 12px;
+            text-align: center; overflow: hidden;
+        }
+        .architecture-img {
+            max-width: 100%; height: auto;
+            border-radius: 6px; display: block; margin: 0 auto;
+        }
+
+        .control-section { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+        @media (max-width: 1000px) { .control-section { grid-template-columns: 1fr; } }
+        
+        .control-box { background: var(--bg-secondary); border-radius: 8px; padding: 16px; }
+        .control-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: var(--blue); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-secondary); border-color: var(--blue); }
+        .btn-success { background: var(--green); color: white; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        .mode-selector { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .mode-selector.show { display: block; }
+        .mode-option {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px; margin-bottom: 8px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .mode-option:hover { border-color: var(--blue); }
+        .mode-option h4 { font-size: 13px; margin-bottom: 4px; }
+        .mode-option p { font-size: 11px; color: var(--text-muted); margin: 0; }
+        
+        .manual-controls { display: none; margin-top: 12px; }
+        .manual-controls.show { display: block; }
+        .truck-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+        .truck-btn {
+            padding: 12px 8px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text); font-size: 11px; cursor: pointer;
+            text-align: center; transition: all 0.2s;
+        }
+        .truck-btn:hover { border-color: var(--red); background: rgba(239,68,68,0.1); }
+        .truck-btn span { display: block; font-weight: 600; margin-bottom: 2px; }
+
+        .instructions { background: var(--bg-secondary); border-radius: 8px; padding: 16px; margin-top: 12px; }
+        .instruction-list { list-style: none; counter-reset: step; }
+        .instruction-list li {
+            counter-increment: step; padding: 8px 0; padding-left: 32px;
+            position: relative; font-size: 13px; color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+        }
+        .instruction-list li:last-child { border-bottom: none; }
+        .instruction-list li::before {
+            content: counter(step); position: absolute; left: 0;
+            width: 22px; height: 22px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 50%;
+            font-size: 11px; font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--blue);
+        }
+        .instruction-list li strong { color: var(--text); }
+        .instruction-highlight { background: rgba(239,68,68,0.15); padding: 2px 6px; border-radius: 4px; color: var(--red); font-weight: 500; }
+        .instruction-note { background: rgba(59,130,246,0.1); padding: 2px 6px; border-radius: 4px; color: var(--blue); }
+
+        .stats-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+        @media (max-width: 800px) { .stats-bar { grid-template-columns: repeat(3, 1fr); } }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px 16px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .stat-icon.blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+        .stat-icon.green { background: rgba(16,185,129,0.15); color: var(--green); }
+        .stat-icon.red { background: rgba(239,68,68,0.15); color: var(--red); }
+        .stat-icon.purple { background: rgba(139,92,246,0.15); color: var(--purple); }
+        .stat-icon.yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .stat-value { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+
+        .content-grid { display: grid; grid-template-columns: 280px 1fr 340px; gap: 16px; margin-bottom: 16px; }
+        @media (max-width: 1100px) { .content-grid { grid-template-columns: 1fr; } }
+
+        .fleet-list { max-height: 400px; overflow-y: auto; }
+        .truck-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-left: 3px solid var(--green); border-radius: 8px;
+            padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .truck-card:hover { background: var(--bg-card); }
+        .truck-card.critical { border-left-color: var(--red); }
+        .truck-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .truck-id { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; }
+        .truck-status { font-size: 10px; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 600; }
+        .truck-status.normal { background: rgba(16,185,129,0.15); color: var(--green); }
+        .truck-status.critical { background: rgba(239,68,68,0.15); color: var(--red); }
+        .truck-info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; color: var(--text-muted); }
+        .truck-info span { display: flex; align-items: center; gap: 6px; }
+        .truck-info i { width: 12px; }
+
+        .map-container { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); position: relative; }
+        #map { width: 100%; height: 400px; background: var(--bg-secondary); }
+        .map-legend {
+            position: absolute; top: 12px; right: 12px;
+            background: rgba(17,24,39,0.9); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 14px; z-index: 1000;
+            display: flex; gap: 16px; font-size: 11px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legend-dot.normal { background: var(--green); }
+        .legend-dot.critical { background: var(--red); }
+
+        .alerts-list { max-height: 400px; overflow-y: auto; }
+        .alert-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-left: 3px solid var(--red); border-radius: 8px;
+            padding: 12px; margin-bottom: 10px;
+        }
+        .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .alert-severity { font-size: 11px; font-weight: 700; color: var(--red); text-transform: uppercase; }
+        .alert-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+        .alert-truck { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .alert-details { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        .alert-message { font-size: 12px; color: var(--text-dim); padding: 8px; background: var(--bg-card); border-radius: 6px; margin-bottom: 10px; }
+        .ai-box {
+            background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1));
+            border: 1px solid rgba(139,92,246,0.3); border-radius: 8px; padding: 12px;
+        }
+        .ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--purple); text-transform: uppercase; }
+        .ai-content { font-size: 12px; line-height: 1.7; color: var(--text-dim); }
+        .ai-content strong { color: var(--text); }
+        .ai-pending { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-card); border-radius: 6px; font-size: 12px; color: var(--text-muted); }
+        .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .logs-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
+        .logs-header { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .logs-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+        .logs-title i { color: var(--blue); }
+        .logs-content { height: 180px; overflow-y: auto; padding: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; background: #0d1117; }
+        .log-entry { padding: 4px 8px; border-radius: 4px; margin-bottom: 2px; display: flex; gap: 8px; }
+        .log-entry:hover { background: rgba(255,255,255,0.03); }
+        .log-time { color: var(--text-muted); min-width: 75px; }
+        .log-source { min-width: 80px; font-weight: 500; }
+        .log-source.SIMULATOR { color: var(--blue); }
+        .log-source.KAFKA { color: var(--purple); }
+        .log-source.FLINK { color: var(--yellow); }
+        .log-source.AI { color: var(--green); }
+        .log-source.SERVER { color: var(--text-dim); }
+        .log-source.CLIENT { color: var(--text-dim); }
+        .log-message { color: var(--text-dim); }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty-state i { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 13px; }
+
+        .leaflet-container { background: var(--bg-secondary); }
+        .truck-marker {
+            width: 40px; height: 40px; background: var(--bg-card);
+            border: 3px solid var(--green); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; color: var(--green);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .truck-marker.critical { border-color: var(--red); color: var(--red); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .truck-label {
+            position: absolute; bottom: -20px; left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px; font-weight: 600;
+            background: var(--bg-card); padding: 2px 6px;
+            border-radius: 4px; white-space: nowrap;
+            border: 1px solid var(--border);
+        }
+        .leaflet-popup-content-wrapper { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+        .leaflet-popup-content { margin: 12px; color: var(--text); font-size: 12px; }
+        .leaflet-popup-tip { background: var(--bg-card); }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-shield-alt"></i></div>
+            <div class="logo-text">CYBER-PHYSICAL GUARD</div>
+        </div>
+        <div class="header-status">
+            <div class="status-badge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div class="status-badge" id="runStatus" style="display:none;">
+                <i class="fas fa-play" style="color:var(--green);font-size:10px;"></i>
+                <span>Running</span>
+            </div>
+            <div class="status-badge" id="timerBadge" style="display:none;background:rgba(239,68,68,0.2);">
+                <i class="fas fa-clock" style="color:var(--red);font-size:10px;"></i>
+                <span id="timerText">4:00</span>
+            </div>
+            <div class="datetime" id="datetime"></div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="panel">
+            <div class="panel-header"><i class="fas fa-project-diagram"></i> System Architecture & Controls</div>
+            <div class="panel-body">
+                <div class="control-section">
+                    <div class="architecture-img-container">
+                        <img src="/static/diagram.jpeg" alt="System Architecture Diagram" class="architecture-img">
+                    </div>
+                    <div>
+                        <div class="control-box">
+                            <div class="control-title"><i class="fas fa-gamepad"></i> Demo Control</div>
+                            <div id="startSection">
+                                <button class="btn btn-primary" onclick="showModeSelector()">
+                                    <i class="fas fa-play"></i> START DEMO
+                                </button>
+                                <div class="mode-selector" id="modeSelector">
+                                    <div class="mode-option" onclick="startDemo(true)">
+                                        <h4><i class="fas fa-robot"></i> AUTOMATIC MODE</h4>
+                                        <p>System auto-triggers critical alerts every 20-30 seconds on different trucks.</p>
+                                    </div>
+                                    <div class="mode-option" onclick="startDemo(false)">
+                                        <h4><i class="fas fa-hand-pointer"></i> MANUAL MODE</h4>
+                                        <p>You control when trucks become critical using the trigger buttons.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="runningSection" style="display:none;">
+                                <div class="manual-controls show">
+                                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Click to trigger critical alert:</div>
+                                    <div class="truck-buttons">
+                                        <button class="truck-btn" onclick="triggerTruck(1)"><span>1</span>Vaccines</button>
+                                        <button class="truck-btn" onclick="triggerTruck(2)"><span>2</span>Seafood</button>
+                                        <button class="truck-btn" onclick="triggerTruck(3)"><span>3</span>Electronics</button>
+                                        <button class="truck-btn" onclick="triggerTruck(4)"><span>4</span>Insulin</button>
+                                        <button class="truck-btn" onclick="triggerTruck(5)"><span>5</span>Produce</button>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-success" onclick="resetTrucks()"><i class="fas fa-undo"></i> RESET ALL</button>
+                                        <button class="btn btn-danger" onclick="stopDemo()"><i class="fas fa-stop"></i> STOP DEMO</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="instructions">
+                            <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text);">
+                                <i class="fas fa-info-circle" style="color:var(--blue);"></i> Important Instructions
+                            </div>
+                            <ol class="instruction-list">
+                                <li>Click <strong>START DEMO</strong> and select Automatic or Manual mode</li>
+                                <li>Trucks appear on the map - <span class="instruction-highlight">RED = Critical</span></li>
+                                <li><strong>Click the RED truck on the map</strong> to view alert details</li>
+                                <li>AI recommendation takes <span class="instruction-note">8-10 seconds</span> to generate</li>
+                                <li>Use <strong>RESET ALL</strong> to return trucks to normal state</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-truck"></i></div><div><div class="stat-value" id="statFleet">0</div><div class="stat-label">Fleet</div></div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="stat-value" id="statNormal">0</div><div class="stat-label">Normal</div></div></div>
+            <div class="stat-card"><div class="stat-icon red"><i class="fas fa-exclamation-circle"></i></div><div><div class="stat-value" id="statCritical">0</div><div class="stat-label">Critical</div></div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-brain"></i></div><div><div class="stat-value" id="statAI">0</div><div class="stat-label">AI Calls</div></div></div>
+            <div class="stat-card"><div class="stat-icon yellow"><i class="fas fa-bell"></i></div><div><div class="stat-value" id="statAlerts">0</div><div class="stat-label">Alerts</div></div></div>
+        </div>
+
+        <div class="content-grid">
+            <div class="panel">
+                <div class="panel-header"><i class="fas fa-satellite-dish"></i> Fleet Telemetry</div>
+                <div class="panel-body fleet-list" id="fleetList">
+                    <div class="empty-state"><i class="fas fa-truck"></i><p>Start demo to see fleet data</p></div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div class="map-legend">
+                    <div class="legend-item"><div class="legend-dot normal"></div> Normal</div>
+                    <div class="legend-item"><div class="legend-dot critical"></div> Critical</div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><i class="fas fa-bell"></i> Alerts & AI Analysis</div>
+                <div class="panel-body alerts-list" id="alertsList">
+                    <div class="empty-state"><i class="fas fa-check-double"></i><p>No alerts - all systems normal</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-panel">
+            <div class="logs-header">
+                <div class="logs-title"><i class="fas fa-terminal"></i> System Logs</div>
+                <button class="btn btn-secondary" style="padding:6px 12px;font-size:11px;" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="logs-content" id="logsContent"></div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let ws = null, map = null, markers = {}, trucks = {}, alerts = [], logs = [];
+        let demoTimeout = 240, demoStartTime = null, timerInterval = null;
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([31.0, -97.5], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('timerBadge').style.display = 'flex';
+            
+            timerInterval = setInterval(() => {
+                if (!demoStartTime) { stopTimer(); return; }
+                const elapsed = (Date.now() / 1000) - demoStartTime;
+                const remaining = Math.max(0, demoTimeout - elapsed);
+                document.getElementById('timerText').textContent = formatTime(remaining);
+                
+                // Change color when less than 60 seconds
+                const timerBadge = document.getElementById('timerBadge');
+                if (remaining <= 60) {
+                    timerBadge.style.background = 'rgba(239,68,68,0.4)';
+                } else {
+                    timerBadge.style.background = 'rgba(239,68,68,0.2)';
+                }
+                
+                if (remaining <= 0) {
+                    stopTimer();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            document.getElementById('timerBadge').style.display = 'none';
+            demoStartTime = null;
+        }
+
+        function updateMarker(truck) {
+            const status = truck.status || 'normal';
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="truck-marker ${status}"><i class="fas fa-truck"></i></div><div class="truck-label">${truck.truck_id}</div>`,
+                iconSize: [40, 60], iconAnchor: [20, 20]
+            });
+            if (markers[truck.truck_id]) {
+                markers[truck.truck_id].setLatLng([truck.lat, truck.lng]).setIcon(icon);
+            } else {
+                markers[truck.truck_id] = L.marker([truck.lat, truck.lng], { icon }).addTo(map);
+            }
+            const isCritical = status === 'critical';
+            markers[truck.truck_id].bindPopup(`
+                <div style="min-width:180px;">
+                    <div style="font-weight:600;margin-bottom:8px;">${truck.truck_id}</div>
+                    <div style="display:grid;gap:4px;font-size:12px;">
+                        <div>Cargo: <strong>${truck.cargo}</strong></div>
+                        <div>Temp: <strong style="color:${isCritical ? 'var(--red)' : 'inherit'}">${truck.temp?.toFixed(1)}C</strong></div>
+                        <div>Speed: ${truck.speed?.toFixed(0)} km/h</div>
+                        <div>Fuel: ${truck.fuel?.toFixed(0)}%</div>
+                        <div>Status: <span style="color:${isCritical ? 'var(--red)' : 'var(--green)'}">${status.toUpperCase()}</span></div>
+                    </div>
+                </div>`);
+        }
+
+        function renderFleet() {
+            const container = document.getElementById('fleetList');
+            const list = Object.values(trucks);
+            if (list.length === 0) { container.innerHTML = '<div class="empty-state"><i class="fas fa-truck"></i><p>Start demo to see fleet data</p></div>'; return; }
+            list.sort((a, b) => (a.status === 'critical' ? -1 : 1));
+            container.innerHTML = list.map(t => `
+                <div class="truck-card ${t.status || 'normal'}" onclick="focusTruck('${t.truck_id}')">
+                    <div class="truck-header"><span class="truck-id">${t.truck_id}</span><span class="truck-status ${t.status || 'normal'}">${(t.status || 'normal').toUpperCase()}</span></div>
+                    <div class="truck-info">
+                        <span><i class="fas fa-box"></i> ${t.cargo}</span>
+                        <span><i class="fas fa-thermometer-half"></i> ${t.temp?.toFixed(1)}C</span>
+                        <span><i class="fas fa-tachometer-alt"></i> ${t.speed?.toFixed(0)} km/h</span>
+                        <span><i class="fas fa-gas-pump"></i> ${t.fuel?.toFixed(0)}%</span>
+                    </div>
+                </div>`).join('');
+        }
+
+        function renderAlerts() {
+            const container = document.getElementById('alertsList');
+            if (alerts.length === 0) { container.innerHTML = '<div class="empty-state"><i class="fas fa-check-double"></i><p>No alerts - all systems normal</p></div>'; return; }
+            container.innerHTML = alerts.slice(0, 20).map(a => {
+                const time = new Date(a.timestamp).toLocaleTimeString();
+                const aiHtml = a.ai_recommendation 
+                    ? `<div class="ai-box"><div class="ai-header"><i class="fas fa-brain"></i> Gemini AI Analysis</div><div class="ai-content">${a.ai_recommendation.replace(/\n/g, '<br>').replace(/(SEVERITY:|ACTION:|URGENCY:|NOTIFY:)/g, '<strong>$1</strong>')}</div></div>`
+                    : `<div class="ai-pending"><div class="spinner"></div>Generating AI recommendation...</div>`;
+                return `<div class="alert-card">
+                    <div class="alert-header"><span class="alert-severity">CRITICAL</span><span class="alert-time">${time}</span></div>
+                    <div class="alert-truck">${a.truck_id} - ${a.cargo}</div>
+                    <div class="alert-details">Temperature: ${a.temp?.toFixed(1)}C | Value: $${(a.cargo_value || 0).toLocaleString()}</div>
+                    <div class="alert-message">${a.message}</div>${aiHtml}</div>`;
+            }).join('');
+        }
+
+        function addLog(entry) { logs.unshift(entry); if (logs.length > 100) logs = logs.slice(0, 100); renderLogs(); }
+        function renderLogs() {
+            document.getElementById('logsContent').innerHTML = logs.slice(0, 50).map(l => 
+                `<div class="log-entry"><span class="log-time">${l.time?.split(' ')[1] || l.time}</span><span class="log-source ${l.source}">[${l.source}]</span><span class="log-message">${l.message}</span></div>`
+            ).join('');
+        }
+        function clearLogs() { logs = []; renderLogs(); }
+
+        function updateStats() {
+            const list = Object.values(trucks);
+            document.getElementById('statFleet').textContent = list.length;
+            document.getElementById('statNormal').textContent = list.filter(t => (t.status || 'normal') === 'normal').length;
+            document.getElementById('statCritical').textContent = list.filter(t => t.status === 'critical').length;
+            document.getElementById('statAlerts').textContent = alerts.length;
+        }
+
+        function focusTruck(id) { if (trucks[id] && markers[id]) { map.setView([trucks[id].lat, trucks[id].lng], 9); markers[id].openPopup(); } }
+        function showModeSelector() { document.getElementById('modeSelector').classList.add('show'); }
+        
+        function startDemo(auto) {
+            ws.send(JSON.stringify({ command: 'start', demo: auto }));
+            document.getElementById('startSection').style.display = 'none';
+            document.getElementById('runningSection').style.display = 'block';
+            document.getElementById('runStatus').style.display = 'flex';
+        }
+        
+        function stopDemo() {
+            ws.send(JSON.stringify({ command: 'stop' }));
+            resetUI();
+        }
+        
+        function resetUI() {
+            document.getElementById('startSection').style.display = 'block';
+            document.getElementById('runningSection').style.display = 'none';
+            document.getElementById('modeSelector').classList.remove('show');
+            document.getElementById('runStatus').style.display = 'none';
+            stopTimer();
+        }
+        
+        function triggerTruck(num) { ws.send(JSON.stringify({ command: 'trigger', truck: num })); }
+        function resetTrucks() { ws.send(JSON.stringify({ command: 'reset' })); }
+
+        function updateDateTime() {
+            document.getElementById('datetime').textContent = new Date().toLocaleString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function showTimeoutAlert(message) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'timeoutOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;';
+            
+            overlay.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;max-width:400px;">
+                    <i class="fas fa-clock" style="font-size:48px;color:var(--yellow);margin-bottom:16px;"></i>
+                    <h2 style="margin-bottom:12px;color:var(--text);">Session Timeout</h2>
+                    <p style="color:var(--text-dim);margin-bottom:24px;">${message}</p>
+                    <button onclick="location.reload()" class="btn btn-primary" style="padding:12px 32px;">
+                        <i class="fas fa-redo"></i> Restart Demo
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+        }
+
+        function connect() {
+            const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('active');
+                document.getElementById('statusText').textContent = 'Connected';
+                addLog({ time: new Date().toLocaleTimeString(), source: 'CLIENT', message: 'Connected to server' });
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                
+                if (msg.type === 'init') {
+                    trucks = msg.trucks || {}; alerts = msg.alerts || []; logs = msg.logs || [];
+                    document.getElementById('statAI').textContent = msg.stats?.ai_calls || 0;
+                    
+                    // Get timeout settings
+                    if (msg.timeouts) {
+                        demoTimeout = msg.timeouts.demo_timeout || 240;
+                        if (msg.timeouts.remaining_time !== null && msg.status?.running) {
+                            demoStartTime = (Date.now() / 1000) - (demoTimeout - msg.timeouts.remaining_time);
+                            startTimer();
+                        }
+                    }
+                    
+                    Object.values(trucks).forEach(updateMarker); renderFleet(); renderAlerts(); renderLogs(); updateStats();
+                    
+                    if (msg.status?.running) {
+                        document.getElementById('startSection').style.display = 'none';
+                        document.getElementById('runningSection').style.display = 'block';
+                        document.getElementById('runStatus').style.display = 'flex';
+                    }
+                }
+                
+                if (msg.type === 'truck_update') { 
+                    trucks[msg.data.truck_id] = msg.data; 
+                    updateMarker(msg.data); 
+                    renderFleet(); 
+                    updateStats(); 
+                }
+                
+                if (msg.type === 'alert') {
+                    if (!alerts.some(a => a.id === msg.data.id)) { 
+                        alerts.unshift(msg.data); 
+                        if (alerts.length > 50) alerts = alerts.slice(0, 50); 
+                    }
+                    if (msg.stats?.ai_calls) document.getElementById('statAI').textContent = msg.stats.ai_calls;
+                    renderAlerts(); 
+                    updateStats();
+                }
+                
+                if (msg.type === 'log') addLog(msg.data);
+                
+                if (msg.type === 'status') {
+                    if (msg.running) {
+                        // Demo started
+                        demoStartTime = msg.started_at || (Date.now() / 1000);
+                        demoTimeout = msg.demo_timeout || 240;
+                        startTimer();
+                        document.getElementById('startSection').style.display = 'none';
+                        document.getElementById('runningSection').style.display = 'block';
+                        document.getElementById('runStatus').style.display = 'flex';
+                    } else {
+                        // Demo stopped
+                        resetUI();
+                        if (msg.reason === 'timeout') {
+                            // Show popup immediately (connection will close right after)
+                            showTimeoutAlert(msg.message || 'Demo automatically stopped due to timeout.');
+                            demoStartTime = null; // Clear so onclose doesn't show duplicate popup
+                        }
+                    }
+                }
+                
+                if (msg.type === 'disconnect') {
+                    // Show popup immediately before connection closes
+                    showTimeoutAlert(msg.message || 'Connection closed due to inactivity.');
+                    demoStartTime = null; // Clear so onclose doesn't show another popup
+                }
+            };
+            
+            ws.onclose = (event) => {
+                document.getElementById('statusDot').classList.remove('active');
+                document.getElementById('statusText').textContent = 'Disconnected';
+                stopTimer();
+                
+                // Don't auto-reconnect if timeout overlay is shown
+                if (document.getElementById('timeoutOverlay')) {
+                    return;
+                }
+                
+                // If demo was running when connection closed, show timeout message
+                if (demoStartTime) {
+                    showTimeoutAlert('Demo session ended. Click Restart to begin a new session.');
+                    return;
+                }
+                
+                // Normal disconnect - try to reconnect
+                setTimeout(connect, 3000);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { initMap(); updateDateTime(); setInterval(updateDateTime, 1000); connect(); });
+    </script>
+</body>
+</html>
