@@ -60,6 +60,7 @@ The data flows like this: Fleet simulator sends truck telemetry to Kafka every 2
 ![Report View](docs/images/Screenshot%202025-12-29%20142702.png)
 ![Actions Panel](docs/images/Screenshot%202025-12-29%20143430.png)
 ![Download Dialog](docs/images/Screenshot%202025-12-29%20145052.png)
+![System Logs](docs/images/system-logs.png)
 
 ---
 
