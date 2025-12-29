@@ -2,7 +2,7 @@
 
 A real-time fleet monitoring system that detects temperature anomalies in cargo trucks and generates AI-powered recommendations for fleet operators.
 
-Built for the Confluent Challenge at Google Cloud Hackathon 2024.
+Built for the Confluent Challenge at Google Cloud Hackathon 2025.
 
 ---
 
