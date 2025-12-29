@@ -78,21 +78,31 @@ Create two topics in Confluent Cloud:
 The Flink SQL query that does the anomaly detection:
 
 ```sql
-INSERT INTO critical_alerts_json
+INSERT INTO `critical_alerts_json`
 SELECT 
-    truck_id,
+    'CRITICAL' AS alert_level,
+    CASE 
+        WHEN cargo = 'Vaccines' AND temp > 8 THEN 'Vaccine temperature exceeded 8C'
+        WHEN cargo = 'Vaccines' AND temp < 2 THEN 'Vaccine temperature too low'
+        WHEN cargo = 'Frozen Seafood' AND temp > -18 THEN 'Frozen seafood thawing'
+        WHEN cargo = 'Insulin' AND temp > 8 THEN 'Insulin temperature critical'
+        WHEN cargo = 'Insulin' AND temp < 2 THEN 'Insulin temperature too low'
+        WHEN cargo = 'Electronics' AND temp > 35 THEN 'Electronics overheating'
+        WHEN cargo = 'Electronics' AND temp < 10 THEN 'Electronics too cold'
+        WHEN cargo = 'Fresh Produce' AND temp > 5 THEN 'Fresh produce temperature high'
+        ELSE 'Temperature anomaly detected'
+    END AS alert_message,
     cargo,
     temp,
-    'CRITICAL' as alert_level,
-    CONCAT('Temperature anomaly: ', CAST(temp AS STRING), 'C') as alert_message,
-    timestamp
-FROM truck_telemetry
+    `timestamp`,
+    truck_id
+FROM `truck_telemetry`
 WHERE 
-    (cargo = 'Vaccines' AND temp > 8) OR
-    (cargo = 'Insulin' AND temp > 8) OR
-    (cargo = 'Frozen Seafood' AND temp > -18) OR
-    (cargo = 'Fresh Produce' AND temp > 6) OR
-    (cargo = 'Electronics' AND temp > 35);
+    (cargo = 'Vaccines' AND (temp > 8 OR temp < 2))
+    OR (cargo = 'Frozen Seafood' AND temp > -18)
+    OR (cargo = 'Insulin' AND (temp > 8 OR temp < 2))
+    OR (cargo = 'Electronics' AND (temp > 35 OR temp < 10))
+    OR (cargo = 'Fresh Produce' AND temp > 5);
 ```
 
 ## Project Structure
