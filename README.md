@@ -17,6 +17,13 @@ The dashboard shows everything in real-time on a map. Trucks turn red when they'
 ## Architecture
 
 ![System Architecture](docs/images/architecture.png)
+![Upload Interface](docs/images/Screenshot%202025-12-28%20235429.png)
+![Validation Progress](docs/images/Screenshot%202025-12-29%20131824.png)
+![Compliance Results](docs/images/Screenshot%202025-12-29%20132054.png)
+![Detailed Feedback](docs/images/Screenshot%202025-12-29%20132236.png)
+![Report View](docs/images/Screenshot%202025-12-29%20142702.png)
+![Actions Panel](docs/images/Screenshot%202025-12-29%20143430.png)
+![Download Dialog](docs/images/Screenshot%202025-12-29%20145052.png)
 
 The data flows like this:
 
